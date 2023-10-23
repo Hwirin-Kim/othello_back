@@ -1,6 +1,9 @@
 # Dependency directories
 node_modules/
 npm-debug.log
+config
+migrations
+models
 
 # IDE directories
 .vscode/

@@ -17,6 +17,7 @@ class User extends Model {
   public id!: number;
   public username!: string;
   public password!: string;
+  public nickname!: string;
 }
 sequelize
   .authenticate()
@@ -37,6 +38,10 @@ User.init(
       primaryKey: true,
     },
     username: {
+      type: new DataTypes.STRING(128),
+      allowNull: false,
+    },
+    nickname: {
       type: new DataTypes.STRING(128),
       allowNull: false,
     },
