@@ -133,6 +133,12 @@ app.get("/login", async (req, res) => {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 쿠키의 만료 기간 (7일)
       });
 
+      //Refresh Token DB에 저장
+      await User.update(
+        { refreshToken: refreshToken },
+        { where: { id: user.id } }
+      );
+
       // Refresh Token은 안전한 저장소에 저장 (예: HttpOnly 쿠키 또는 브라우저 저장소)
       // 여기서는 예시로 클라이언트 응답 데이터에 추가합니다.
       return res.status(200).json({

@@ -18,6 +18,7 @@ class User extends Model {
   public username!: string;
   public password!: string;
   public nickname!: string;
+  public refreshToken!: string;
 }
 sequelize
   .authenticate()
@@ -48,6 +49,11 @@ User.init(
     password: {
       type: new DataTypes.STRING(128),
       allowNull: false,
+    },
+    refreshToken: {
+      // refreshToken 컬럼 정의
+      type: new DataTypes.STRING(256), // 적절한 데이터 타입으로 지정
+      allowNull: true, // 사용자 생성 시 refreshToken이 없을 수도 있으므로 allowNull 설정
     },
   },
   {
