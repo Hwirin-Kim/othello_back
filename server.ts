@@ -76,6 +76,11 @@ app.post("/register", async (req: Request, res: Response) => {
 app.post("/check", async (req, res) => {
   try {
     const { username } = req.body;
+    console.log(username);
+    if (!username) {
+      return res.status(400).json({ error: "username이 제공되지 않았습니다." });
+    }
+
     const existingUser = await User.findOne({ where: { username } });
 
     if (existingUser) {
