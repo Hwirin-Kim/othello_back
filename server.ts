@@ -11,6 +11,7 @@ const server = createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "http://localhost:3000",
+    exposedHeaders: ["Authorization"],
   },
 });
 
@@ -94,7 +95,7 @@ app.post("/check", async (req, res) => {
   }
 });
 
-app.get("/login", async (req, res) => {
+app.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
 
