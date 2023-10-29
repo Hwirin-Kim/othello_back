@@ -51,7 +51,7 @@ export default function initSocket(io: Server) {
         io.to(roomId).emit("user_joined", {
           success: true,
           data: {
-            isWhat: "notice",
+            type: "notice",
             senderId: username,
             senderNickname: nickname,
             message: `${nickname} 님이 접속 하셨습니다.`,
@@ -70,7 +70,7 @@ export default function initSocket(io: Server) {
       const { roomId, message } = data;
       const roomInfo = rooms.find((room) => room.roomId === roomId);
       const messageData = {
-        isWhat: "message",
+        type: "message",
         senderId: username,
         senderNickname: nickname,
         message: message,
@@ -100,7 +100,7 @@ export default function initSocket(io: Server) {
       } else {
         roomInfo.users = roomInfo.users.filter((user) => user !== username);
         const messageData = {
-          isWhat: "notice",
+          type: "notice",
           senderId: username,
           senderNickname: nickname,
           message: `${nickname} 님이 방을 나가셨습니다.`,
