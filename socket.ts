@@ -30,6 +30,12 @@ export default function initSocket(io: Server) {
       const roomInfo = rooms.find((room) => room.roomId === roomId);
       console.log(roomInfo);
       const currentUserCount = roomInfo.users.length;
+      const messageData = {
+        senderId: username,
+        senderNickname: nickname,
+        message: "",
+        timestamp: new Date(),
+      };
 
       if (currentUserCount > 2 && !roomInfo.users.includes(username)) {
         console.log("소켓 정원 초과");
@@ -42,7 +48,15 @@ export default function initSocket(io: Server) {
         roomInfo.users.push(username);
         socket.join(roomId);
         socket.emit("joined_room", { success: true, data: roomId });
-        io.to(roomId).emit("user_joined", `${nickname} 님이 접속 하셨습니다.`);
+        io.to(roomId).emit("user_joined", {
+          success: true,
+          data: {
+            isWhat: "notice",
+            senderId: username,
+            senderNickname: nickname,
+            message: `${nickname} 님이 접속 하셨습니다.`,
+          },
+        });
       } else {
         console.log(nickname, ": 님 이 방에 접속함");
         socket.join(roomId);
@@ -55,6 +69,13 @@ export default function initSocket(io: Server) {
       console.log(data);
       const { roomId, message } = data;
       const roomInfo = rooms.find((room) => room.roomId === roomId);
+      const messageData = {
+        isWhat: "message",
+        senderId: username,
+        senderNickname: nickname,
+        message: message,
+        timestamp: new Date(),
+      };
       if (!roomInfo.users.includes(username)) {
         console.log("해당 방에 접속하지 않았습니다.");
         socket.emit("send_message", {
@@ -63,8 +84,8 @@ export default function initSocket(io: Server) {
         });
       } else {
         io.to(roomId).emit("receive_message", {
-          user: socket.id,
-          message,
+          success: true,
+          data: messageData,
         });
       }
     });
@@ -78,10 +99,19 @@ export default function initSocket(io: Server) {
         });
       } else {
         roomInfo.users = roomInfo.users.filter((user) => user !== username);
-
+        const messageData = {
+          isWhat: "notice",
+          senderId: username,
+          senderNickname: nickname,
+          message: `${nickname} 님이 방을 나가셨습니다.`,
+          timestamp: new Date(),
+        };
         socket.leave(roomId);
         console.log(nickname, ": 방나감");
-        io.to(roomId).emit("user_left", `${nickname} 님이 방을 나가셨습니다.`);
+        io.to(roomId).emit("user_left", {
+          success: true,
+          data: messageData,
+        });
       }
     });
 
