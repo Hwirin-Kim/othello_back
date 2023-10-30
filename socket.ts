@@ -1,5 +1,7 @@
 import { Server, Socket } from "socket.io";
-import { Room } from "./type";
+import Message from "./models/message";
+import Room from "./models/room";
+import User from "./models/user";
 
 const rooms: Room[] = [];
 export default function initSocket(io: Server) {
@@ -7,29 +9,22 @@ export default function initSocket(io: Server) {
     const username = socket.handshake.query.username as string;
     const nickname = socket.handshake.query.nickname as string;
 
+    const user = new User(username, nickname);
     console.log(`${nickname} (${username}) 님이 소켓에 접속하였음`);
 
-    socket.on("create_room", (roomInfo: string) => {
-      let today = new Date();
-      const roomId = (rooms.length + today.getTime()).toString();
-      const room = {
-        roomId,
-        title: roomInfo,
-        users: [username],
-        createdAt: today.getTime(),
-      };
-
+    socket.on("create_room", (title: string) => {
+      const room = new Room(title);
       rooms.unshift(room);
       socket.join(room.roomId);
-      socket.emit("created_room", { success: true, roomId });
+      socket.emit("created_room", { success: true, roomId: room.roomId });
       io.emit("room_list", rooms);
     });
 
     socket.on("join_room", (roomId) => {
       console.log(roomId, socket.id, "joined");
-      const roomInfo = rooms.find((room) => room.roomId === roomId);
-      console.log(roomInfo);
-      const currentUserCount = roomInfo.users.length;
+      const room = rooms.find((room) => room.roomId === roomId);
+      console.log(room);
+      const currentUserCount = room.users.length;
       const messageData = {
         senderId: username,
         senderNickname: nickname,
@@ -37,25 +32,29 @@ export default function initSocket(io: Server) {
         timestamp: new Date(),
       };
 
-      if (currentUserCount > 2 && !roomInfo.users.includes(username)) {
+      if (
+        currentUserCount > 2 &&
+        !room.users.some((user) => user.username === username)
+      ) {
         console.log("소켓 정원 초과");
         socket.emit("joined_failed", {
           success: false,
           data: "방이 가득 찼습니다.",
         });
-      } else if (!roomInfo.users.includes(username)) {
+      } else if (!room.users.some((user) => user.username === username)) {
         console.log(nickname, ": 님 이 방에 접속함");
-        roomInfo.users.push(username);
+        const userJoinedMessage = new Message(
+          "notice",
+          username,
+          nickname,
+          `${nickname} 님이 접속 하셨습니다.`
+        );
+        room.users.push(user);
         socket.join(roomId);
         socket.emit("joined_room", { success: true, data: roomId });
         io.to(roomId).emit("user_joined", {
           success: true,
-          data: {
-            type: "notice",
-            senderId: username,
-            senderNickname: nickname,
-            message: `${nickname} 님이 접속 하셨습니다.`,
-          },
+          data: userJoinedMessage,
         });
       } else {
         console.log(nickname, ": 님 이 방에 접속함");
@@ -63,21 +62,16 @@ export default function initSocket(io: Server) {
         socket.emit("joined_room", { success: true, data: roomId });
       }
 
-      console.log(roomInfo);
+      console.log(room);
     });
 
     socket.on("send_message", (data) => {
       console.log(data);
       const { roomId, message } = data;
-      const roomInfo = rooms.find((room) => room.roomId === roomId);
-      const messageData = {
-        type: "message",
-        senderId: username,
-        senderNickname: nickname,
-        message: message,
-        timestamp: new Date(),
-      };
-      if (!roomInfo.users.includes(username)) {
+      const room = rooms.find((room) => room.roomId === roomId);
+      const sendMessage = new Message("message", username, nickname, message);
+
+      if (!room.users.some((user) => user.username === username)) {
         console.log("해당 방에 접속하지 않았습니다.");
         socket.emit("send_message", {
           success: false,
@@ -86,32 +80,33 @@ export default function initSocket(io: Server) {
       } else {
         io.to(roomId).emit("receive_message", {
           success: true,
-          data: messageData,
+          data: sendMessage,
         });
       }
     });
+
     socket.on("leave_room", (roomId) => {
-      const roomInfo = rooms.find((room) => room.roomId === roomId);
-      if (!roomInfo.users.includes(username)) {
+      const room = rooms.find((room) => room.roomId === roomId);
+      const leaveRoomMessage = new Message(
+        "notice",
+        username,
+        nickname,
+        `${nickname} 님이 방을 나가셨습니다.`
+      );
+      if (!room.users.some((user) => user.username === username)) {
         console.log("해당 방에 접속하지 않았습니다.");
         socket.emit("leave_room", {
           success: false,
           data: "해당 방에 접속하지 않으셨습니다.",
         });
       } else {
-        roomInfo.users = roomInfo.users.filter((user) => user !== username);
-        const messageData = {
-          type: "notice",
-          senderId: username,
-          senderNickname: nickname,
-          message: `${nickname} 님이 방을 나가셨습니다.`,
-          timestamp: new Date(),
-        };
+        room.users = room.users.filter((user) => user.username !== username);
+
         socket.leave(roomId);
         console.log(nickname, ": 방나감");
         io.to(roomId).emit("user_left", {
           success: true,
-          data: messageData,
+          data: leaveRoomMessage,
         });
       }
     });
