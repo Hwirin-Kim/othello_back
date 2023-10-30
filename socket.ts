@@ -60,6 +60,7 @@ export default function initSocket(io: Server) {
       } else {
         console.log(nickname, ": 님 이 방에 접속함");
         socket.join(roomId);
+        socket.emit("joined_room", { success: true, data: roomId });
       }
 
       console.log(roomInfo);
@@ -117,6 +118,14 @@ export default function initSocket(io: Server) {
 
     socket.on("get_room", () => {
       socket.emit("room_list", rooms);
+    });
+
+    socket.on("ready", (readyData) => {
+      io.to(readyData.roomId).emit("ready", {
+        username: username,
+        nickname: nickname,
+        status: readyData.status,
+      });
     });
   });
 }
