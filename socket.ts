@@ -1,36 +1,34 @@
 import { Server, Socket } from "socket.io";
-import Message from "./models/message";
-import Room from "./models/room";
-import User from "./models/user";
+import { RoomController } from "./controller/roomController";
+import { UserController } from "./controller/userController";
+import Message from "./models/domain/message";
+import Room from "./models/domain/room";
+import User from "./models/domain/user";
 
 const rooms: Room[] = [];
 export default function initSocket(io: Server) {
+  const userController = new UserController(io);
+  const roomController = new RoomController(io);
   io.on("connection", (socket) => {
-    const username = socket.handshake.query.username as string;
-    const nickname = socket.handshake.query.nickname as string;
+    userController.connectUser(socket);
+    const user = socket.data.user;
 
-    const user = new User(username, nickname);
-    console.log(`${nickname} (${username}) 님이 소켓에 접속하였음`);
+    const { nickname, username } = user;
 
     socket.on("create_room", (title: string) => {
-      const room = new Room(title);
-      rooms.unshift(room);
+      const room = roomController.createRoom(title);
       socket.join(room.roomId);
+      room.addUser(user);
       socket.emit("created_room", { success: true, roomId: room.roomId });
       io.emit("room_list", rooms);
     });
+    3;
 
     socket.on("join_room", (roomId) => {
       console.log(roomId, socket.id, "joined");
       const room = rooms.find((room) => room.roomId === roomId);
       console.log(room);
       const currentUserCount = room.users.length;
-      const messageData = {
-        senderId: username,
-        senderNickname: nickname,
-        message: "",
-        timestamp: new Date(),
-      };
 
       if (
         currentUserCount > 2 &&
@@ -115,12 +113,8 @@ export default function initSocket(io: Server) {
       socket.emit("room_list", rooms);
     });
 
-    socket.on("ready", (readyData) => {
-      io.to(readyData.roomId).emit("ready", {
-        username: username,
-        nickname: nickname,
-        status: readyData.status,
-      });
+    socket.on("ready", (readyStatus) => {
+      user.setReadyStatus(readyStatus);
     });
   });
 }
