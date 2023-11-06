@@ -17,4 +17,7 @@ export class UserController {
     this.user = user;
     console.log(`${nickname} (${username}) 님이 소켓에 접속하였음`);
   }
+  getUser() {
+    return this.user;
+  }
 }

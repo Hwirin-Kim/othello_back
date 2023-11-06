@@ -19,27 +19,31 @@ export class RoomController {
   }
 
   joinRoom(roomId: string, user: User, socket) {
-    const room = this.rooms.find((room) => room.roomId === roomId);
+    const room = this.getRoom(roomId);
     const { username, nickname } = user;
 
     //방이 존재하지 않음
     if (!room) {
-      return null;
+      console.log("방없음");
+      return {
+        success: false,
+        data: "해당 방을 찾을 수 없습니다.",
+      };
     }
-
-    const currentUserCount = room.users.length;
+    const MAXIMUM_USER = 2;
     //방에 내가 없으면서 인원이 2명인 경우
+    const currentUserCount = room.users.length;
     if (
-      currentUserCount > 2 &&
+      currentUserCount >= MAXIMUM_USER &&
       !room.users.some((user) => user.username === username)
     ) {
-      console.log("room 정원 초과");
-      socket.emit("joined_failed", {
+      console.log("정원초과");
+      return {
         success: false,
         data: "정원이 초과되었습니다.",
-      });
-      return true;
+      };
     }
+
     // 방에 처음 입장하는 경우
     else if (!room.users.some((user) => user.username === username)) {
       console.log(nickname, ": 님 이 방에 접속함");
@@ -51,19 +55,20 @@ export class RoomController {
       );
       room.users.push(user);
       socket.join(roomId);
-      socket.emit("joined_room", { success: true, data: roomId });
+
       this.io.to(roomId).emit("user_joined", {
         success: true,
         data: userJoinedMessage,
       });
-      return true;
+      return { success: true };
     }
     // 방에 재입장 하는 경우
     else {
+      room.users = room.users.filter((u) => u.username !== user.username);
+      room.users.push(user);
       console.log(nickname, ": 님 이 방에 접속함");
       socket.join(roomId);
-      socket.emit("joined_room", { success: true, data: roomId });
-      return true;
+      return { success: true };
     }
   }
 
@@ -71,7 +76,7 @@ export class RoomController {
     console.log(data);
     const { username, nickname } = user;
     const { roomId, message } = data;
-    const room = this.rooms.find((room) => room.roomId === roomId);
+    const room = this.getRoom(roomId);
     const sendMessage = new Message("message", username, nickname, message);
 
     if (!room.users.some((user) => user.username === username)) {
@@ -90,7 +95,7 @@ export class RoomController {
 
   leaveRoom(roomId, user, socket) {
     const { username, nickname } = user;
-    const room = this.rooms.find((room) => room.roomId === roomId);
+    const room = this.getRoom(roomId);
     const leaveRoomMessage = new Message(
       "notice",
       username,
@@ -121,6 +126,7 @@ export class RoomController {
           success: true,
           data: message,
         });
+        this.emitRoomInfo(roomId);
       }
 
       //방 삭제
@@ -148,4 +154,47 @@ export class RoomController {
   getRoom(roomId) {
     return this.rooms.find((room) => room.roomId === roomId);
   }
+  emitRoomInfo(roomId) {
+    const room = this.getRoom(roomId);
+    this.io.to(roomId).emit("room_info", room);
+  }
+  ready(roomId, username, nickname) {
+    const room = this.getRoom(roomId);
+    const ready = room.setReady(username);
+
+    if (ready) {
+      const message = new Message(
+        "notice",
+        username,
+        nickname,
+        `${nickname}님이 준비 완료 하셨습니다.`
+      );
+      this.io
+        .to(roomId)
+        .emit("receive_message", { success: true, data: message });
+    } else {
+      const message = new Message(
+        "notice",
+        username,
+        nickname,
+        `${nickname}님이 준비를 취소하였습니다.`
+      );
+      this.io
+        .to(roomId)
+        .emit("receive_message", { success: true, data: message });
+    }
+    return ready;
+  }
+  possibleGameStart(roomId) {
+    const room = this.getRoom(roomId);
+    if (room && room.allUsersReady) {
+      this.io.to(roomId).emit("possible_game_start", true);
+    } else this.io.to(roomId).emit("possible_game_start", false);
+  }
+  // getOpponentInfo(roomId, username) {
+  //   const room = this.getRoom(roomId);
+  //   const users = room.users;
+  //   const opponent = users.find((user) => user.username === username);
+  //   return opponent;
+  // }
 }

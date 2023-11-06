@@ -10,7 +10,7 @@ import jwt from "jsonwebtoken";
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "http://172.30.1.65:3000"],
     exposedHeaders: ["Authorization"],
   },
 });
@@ -76,6 +76,7 @@ app.post("/register", async (req: Request, res: Response) => {
 });
 
 app.post("/check", async (req, res) => {
+  console.log(req.body.payload);
   try {
     const { username } = req.body;
 

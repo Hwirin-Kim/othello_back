@@ -7,7 +7,7 @@ export default function initSocket(io: Server) {
   const roomController = new RoomController(io);
   io.on("connection", (socket) => {
     userController.connectUser(socket);
-    const user = socket.data.user;
+    const user = userController.getUser();
 
     socket.on("create_room", (title: string) => {
       const room = roomController.createRoom(title);
@@ -19,11 +19,9 @@ export default function initSocket(io: Server) {
 
     socket.on("join_room", (roomId, callback) => {
       const join = roomController.joinRoom(roomId, user, socket);
-      const room = roomController.getRoom(roomId);
-      if (!join) {
-        callback({ success: false, data: "해당 방을 찾을 수 없습니다." });
-      } else {
-        callback({ success: true, data: room });
+      roomController.emitRoomInfo(roomId);
+      if (!join.success) {
+        callback(join);
       }
     });
 
@@ -33,10 +31,21 @@ export default function initSocket(io: Server) {
 
     socket.on("leave_room", (roomId) => {
       roomController.leaveRoom(roomId, user, socket);
+      roomController.emitRoomInfo(roomId);
     });
 
     socket.on("get_room", () => {
       roomController.getRoomList(socket);
     });
+
+    socket.on("ready", (roomId, callback) => {
+      const ready = roomController.ready(roomId, user.username, user.nickname);
+      user.setReady(ready);
+      callback(ready);
+      roomController.possibleGameStart(roomId);
+      roomController.emitRoomInfo(roomId);
+    });
+
+    socket.on("opponent_info", (callback) => {});
   });
 }
