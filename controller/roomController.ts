@@ -191,10 +191,28 @@ export class RoomController {
       this.io.to(roomId).emit("possible_game_start", true);
     } else this.io.to(roomId).emit("possible_game_start", false);
   }
-  // getOpponentInfo(roomId, username) {
-  //   const room = this.getRoom(roomId);
-  //   const users = room.users;
-  //   const opponent = users.find((user) => user.username === username);
-  //   return opponent;
-  // }
+
+  gameStart(roomId) {
+    const room = this.getRoom(roomId);
+
+    room.setGameStart();
+    this.io.to(roomId).emit("game_status", room.gameStart);
+    this.emitTurn(roomId, room.currentTurn);
+    this.startTurnTimer(roomId);
+  }
+
+  startTurnTimer(roomId) {
+    setTimeout(() => {
+      this.changeTurn(roomId); // 시간 초과시 턴 변경
+    }, 15000); // 15초 후 턴 변경
+  }
+  changeTurn(roomId) {
+    const room = this.getRoom(roomId);
+    room.setTurn();
+    this.emitTurn(roomId, room.currentTurn);
+  }
+
+  emitTurn(roomId, turn) {
+    this.io.to(roomId).emit("current_turn", { success: true, data: turn });
+  }
 }

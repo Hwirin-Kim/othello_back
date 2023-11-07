@@ -46,6 +46,8 @@ export default function initSocket(io: Server) {
       roomController.emitRoomInfo(roomId);
     });
 
-    socket.on("opponent_info", (callback) => {});
+    socket.on("game_start", (roomId) => {
+      roomController.gameStart(roomId);
+    });
   });
 }
