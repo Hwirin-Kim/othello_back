@@ -3,7 +3,8 @@ import { Server } from "socket.io";
 import app from "./app";
 import initSocket from "./socket";
 import { sequelize } from "./config/database";
-import { userRoutes } from "./routes/user.routes";
+import userRoutes from "./routes/user.routes";
+import authRoutes from "./routes/auth.routes";
 
 sequelize
   .authenticate()
@@ -33,3 +34,5 @@ server.listen(8080, () => {
 });
 
 app.use("/users", userRoutes);
+
+app.use("/", authRoutes);

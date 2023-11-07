@@ -5,8 +5,9 @@ import {
   registerUser,
 } from "../controller/http/user.controller";
 
-export const userRoutes = Router();
+const router = Router();
 
-userRoutes.post("/register", registerUser);
-userRoutes.post("/check", checkUsername);
-userRoutes.post("/login", loginUser);
+router.post("/register", registerUser);
+router.post("/check", checkUsername);
+router.post("/login", loginUser);
+export default router;

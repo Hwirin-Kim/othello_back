@@ -1,3 +1,5 @@
+import { Request } from "express";
+import jwt from "jsonwebtoken";
 export type Room = {
   roomId: string;
   title: string;
@@ -35,3 +37,7 @@ type newRoom = {
     finalBoardState: any; // 게임 종료 시의 보드 상태
   };
 };
+
+export interface RequestWithUser extends Request {
+  user?: string | jwt.JwtPayload;
+}
