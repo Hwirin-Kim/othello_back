@@ -1,7 +1,7 @@
 import { Server, Socket } from "socket.io";
-import Message from "../models/domain/message";
-import Room from "../models/domain/room";
-import User from "../models/domain/user";
+import Message from "../../models/domain/message";
+import Room from "../../models/domain/room";
+import User from "../../models/domain/user";
 
 export class RoomController {
   private io: Server;

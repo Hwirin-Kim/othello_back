@@ -1,6 +1,6 @@
 import { Server } from "socket.io";
-import { RoomController } from "./controller/roomController";
-import { UserController } from "./controller/userController";
+import { RoomController } from "./controller/socket/roomController";
+import { UserController } from "./controller/socket/userController";
 
 export default function initSocket(io: Server) {
   const userController = new UserController(io);

@@ -1,5 +1,5 @@
 import { Server } from "socket.io";
-import User from "../models/domain/user";
+import User from "../../models/domain/user";
 
 export class UserController {
   private io: Server;
