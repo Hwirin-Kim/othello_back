@@ -4,7 +4,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 export const registerUser = async (req: Request, res: Response) => {
-  console.log("Received registration request:", req.body);
   const { username, nickname, password } = req.body;
 
   if (!username || !password || !nickname) {
@@ -50,7 +49,10 @@ export const registerUser = async (req: Request, res: Response) => {
 
     res
       .status(200)
-      .json({ message: "회원가입이 완료되었습니다.", userId: newUser.id });
+      .json({
+        message: "회원가입이 완료되었습니다.",
+        userId: newUser.username,
+      });
   } catch (error) {
     console.error("Database error:", error);
     res.status(500).json({ error: "서버 오류입니다." });
@@ -58,7 +60,6 @@ export const registerUser = async (req: Request, res: Response) => {
 };
 
 export const checkUsername = async (req, res) => {
-  console.log(req.body.payload);
   try {
     const { username } = req.body;
 
@@ -82,7 +83,7 @@ export const loginUser = async (req, res) => {
   console.log("로그인시도!");
   try {
     const { username, password } = req.body;
-    console.log(username, password);
+
     //미입력 필터링
     if (!username || !password) {
       return res.status(401).json({ error: "ID 또는 PW가 미입력 되었습니다." });
@@ -100,19 +101,27 @@ export const loginUser = async (req, res) => {
     if (passwordMatch) {
       const secretKey = process.env.JWT_SECRET;
 
-      const accessToken = jwt.sign({ username: user.username }, secretKey, {
-        expiresIn: "1h", // Access Token의 유효 기간 (1시간)
-      });
+      const accessToken = jwt.sign(
+        { username: user.username, nickname: user.nickname },
+        secretKey,
+        {
+          expiresIn: "1h", // Access Token의 유효 기간 (1시간)
+        }
+      );
 
       // Refresh Token 발급
-      const refreshToken = jwt.sign({ username: user.username }, secretKey, {
-        expiresIn: "7d", // Refresh Token의 유효 기간 (7일)
-      });
+      const refreshToken = jwt.sign(
+        { username: user.username, nickname: user.nickname },
+        secretKey,
+        {
+          expiresIn: "7d", // Refresh Token의 유효 기간 (7일)
+        }
+      );
 
       //토큰 쿠키에 저장
       res.cookie("accessToken", accessToken, {
         httpOnly: true,
-        secure: true, // 개발 환경이 아닐 경우 true로 설정
+
         maxAge: 3600000, // 1시간
       });
       res.cookie("refreshToken", refreshToken, {
@@ -120,13 +129,13 @@ export const loginUser = async (req, res) => {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 쿠키의 만료 기간 (7일)
       });
 
-      //Refresh Token DB에 저장
-      await User.update(
-        { refreshToken: refreshToken },
-        { where: { id: user.id } }
-      );
+      // //Refresh Token DB에 저장
+      // await User.update(
+      //   { refreshToken: refreshToken },
+      //   { where: { id: user.id } }
+      // );
 
-      // Refresh Token은 안전한 저장소에 저장 (예: HttpOnly 쿠키 또는 브라우저 저장소)
+      // // Refresh Token은 안전한 저장소에 저장 (예: HttpOnly 쿠키 또는 브라우저 저장소)
 
       //응답시 json으로 응답
       return res.status(200).json({
@@ -142,4 +151,10 @@ export const loginUser = async (req, res) => {
     console.error("로그인 중 오류 발생:", error);
     res.status(500).json({ error: "서버 오류" });
   }
+};
+
+export const logout = (req, res) => {
+  res.cookie("accessToken", "", { expires: new Date(0) });
+  res.cookie("refreshToken", "", { expires: new Date(0) });
+  res.status(200).send("Logged out");
 };

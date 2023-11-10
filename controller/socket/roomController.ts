@@ -143,7 +143,6 @@ export class RoomController {
   }
 
   getRoomList(socket) {
-    console.log("왜 에러가..?", socket);
     socket.emit("room_list", this.rooms);
   }
 

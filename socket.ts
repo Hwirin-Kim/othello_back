@@ -1,12 +1,24 @@
 import { Server } from "socket.io";
 import { RoomController } from "./controller/socket/roomController";
 import { UserController } from "./controller/socket/userController";
+import { socketAuthenticate } from "./middleware/socketAuthenticate";
+import { User } from "./models/db/user.model";
+import { CustomSocket } from "./type";
 
 export default function initSocket(io: Server) {
+  io.use(socketAuthenticate);
   const userController = new UserController(io);
   const roomController = new RoomController(io);
-  io.on("connection", (socket) => {
+  io.on("connection", (socket: CustomSocket) => {
     userController.connectUser(socket);
+    const { username } = socket.user;
+    User.findOne({
+      attributes: ["username", "nickname"],
+      where: {
+        username: username,
+      },
+    }).then((res) => (socket.user = res.dataValues));
+
     const user = userController.getUser();
 
     socket.on("create_room", (title: string) => {
@@ -20,9 +32,7 @@ export default function initSocket(io: Server) {
     socket.on("join_room", (roomId, callback) => {
       const join = roomController.joinRoom(roomId, user, socket);
       roomController.emitRoomInfo(roomId);
-      if (!join.success) {
-        callback(join);
-      }
+      callback(join);
     });
 
     socket.on("send_message", (data) => {

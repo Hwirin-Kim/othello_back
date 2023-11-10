@@ -1,5 +1,7 @@
 import { Request } from "express";
-import jwt from "jsonwebtoken";
+import { Socket as BaseSocket } from "socket.io";
+import jwt, { JwtPayload as BaseJwtPayload } from "jsonwebtoken";
+
 export type Room = {
   roomId: string;
   title: string;
@@ -40,4 +42,18 @@ type newRoom = {
 
 export interface RequestWithUser extends Request {
   user?: string | jwt.JwtPayload;
+}
+
+export interface CustomPayload extends BaseJwtPayload {
+  username: string;
+  nickname: string;
+  id?: number;
+  currentRoomId?: number | null;
+  isInGame?: boolean;
+  isReady?: boolean;
+  isOwner?: boolean;
+}
+
+export interface CustomSocket extends BaseSocket {
+  user?: CustomPayload; // 또는 당신의 사용자 타입
 }

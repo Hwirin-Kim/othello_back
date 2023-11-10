@@ -9,8 +9,7 @@ export class UserController {
   }
 
   connectUser(socket) {
-    const username = socket.handshake.query.username as string;
-    const nickname = socket.handshake.query.nickname as string;
+    const { username, nickname } = socket.user;
 
     const user = new User(username, nickname);
     socket.data.user = user;

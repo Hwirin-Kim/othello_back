@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { RequestWithUser } from "../type";
 
@@ -40,7 +40,10 @@ export const authenticate = (
 
           // 새 액세스 토큰 발급
           const newAccessToken = jwt.sign(
-            { username: refreshDecoded.username },
+            {
+              username: refreshDecoded.username,
+              nickname: refreshDecoded.nickname,
+            },
             secretKey!,
             { expiresIn: "1h" }
           );
@@ -48,7 +51,7 @@ export const authenticate = (
           // 새 토큰을 쿠키에 저장
           res.cookie("accessToken", newAccessToken, {
             httpOnly: true,
-            secure: true,
+
             maxAge: 3600000,
           });
 
