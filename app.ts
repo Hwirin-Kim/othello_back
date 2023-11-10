@@ -13,9 +13,4 @@ app.use(
 );
 app.use(cookieParser());
 
-app.get("/", (req, res) => {
-  console.log("user 접속(get)");
-  res.send("hello, this is my server!");
-});
-
 export default app;

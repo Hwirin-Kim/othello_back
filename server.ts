@@ -2,12 +2,9 @@ import { createServer } from "node:http";
 import { Server } from "socket.io";
 import app from "./app";
 import initSocket from "./socket";
-import { sequelize } from "./config/database";
-import { User } from "./models/db/user.model";
-import { GameStatus } from "./models/db/status.model";
-import { Record } from "./models/db/record.model";
 import userRoutes from "./routes/user.routes";
 import authRoutes from "./routes/auth.routes";
+import sequelize from "./models/db";
 
 const connectDB = async () => {
   try {
@@ -17,7 +14,6 @@ const connectDB = async () => {
     console.log("model was synchronized successfully");
   } catch (error) {
     console.error("Database connection failed:", error);
-    process.exit(1);
   }
 };
 
@@ -39,8 +35,8 @@ const startServer = async () => {
     });
 
     app.use("/user", userRoutes);
-
     app.use("/", authRoutes);
+    console.log("서버접속완료");
   } catch (error) {
     console.error("server error");
   }

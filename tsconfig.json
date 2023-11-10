@@ -5,6 +5,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "outDir": "./build",
+    "allowJs": true, // JavaScript 파일 허용
     "resolveJsonModule": true,
     "rootDir": "./",
     "emitDecoratorMetadata": true,

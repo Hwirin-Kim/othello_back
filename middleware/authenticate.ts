@@ -2,13 +2,12 @@ import { Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { RequestWithUser } from "../type";
 
-const secretKey = process.env.JWT_SECRET;
-
 export const authenticate = (
   req: RequestWithUser,
   res: Response,
   next: NextFunction
 ) => {
+  const secretKey = process.env.JWT_SECRET;
   const accessToken = req.cookies.accessToken;
   const refreshToken = req.cookies.refreshToken;
 
@@ -16,10 +15,11 @@ export const authenticate = (
   if (accessToken) {
     try {
       const decoded = jwt.verify(accessToken, secretKey!);
+
       req.user = decoded;
+
       return next();
     } catch (err) {
-      // 액세스 토큰이 만료된 경우 리프레시 토큰 검증
       if (err.name === "TokenExpiredError" && refreshToken) {
         try {
           const refreshDecoded = jwt.verify(refreshToken, secretKey!);
@@ -31,14 +31,11 @@ export const authenticate = (
             throw new Error("Invalid token");
           }
 
-          // 이제 refreshDecoded는 JwtPayload 객체이고 'username' 속성을 가지고 있습니다.
           const username = (refreshDecoded as JwtPayload).username;
 
           if (typeof username !== "string") {
             throw new Error("Invalid token payload");
           }
-
-          // 새 액세스 토큰 발급
           const newAccessToken = jwt.sign(
             {
               username: refreshDecoded.username,

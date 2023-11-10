@@ -1,7 +1,7 @@
 import { Server, Socket } from "socket.io";
+import { User } from "../../models/db/user.model";
 import Message from "../../models/domain/message";
 import Room from "../../models/domain/room";
-import User from "../../models/domain/user";
 
 export class RoomController {
   private io: Server;
@@ -159,6 +159,7 @@ export class RoomController {
   }
   ready(roomId, username, nickname) {
     const room = this.getRoom(roomId);
+    console.log(room);
     const ready = room.setReady(username);
 
     if (ready) {

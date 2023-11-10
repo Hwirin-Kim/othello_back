@@ -50,7 +50,8 @@ export default function initSocket(io: Server) {
 
     socket.on("ready", (roomId, callback) => {
       const ready = roomController.ready(roomId, user.username, user.nickname);
-      user.setReady(ready);
+      console.log(ready);
+      userController.setGameStatusReady(username, ready);
       callback(ready);
       roomController.possibleGameStart(roomId);
       roomController.emitRoomInfo(roomId);

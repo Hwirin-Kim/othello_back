@@ -8,7 +8,7 @@ export const socketAuthenticate = (socket, next) => {
   const cookies = cookie.parse(handshakeData.headers.cookie || "");
   const accessToken = cookies.accessToken;
   const refreshToken = cookies.refreshToken;
-  console.log("미들웨어 접속!");
+  console.log("소켓미들웨어 접속!");
   // 액세스 토큰 검증
   if (accessToken) {
     try {
