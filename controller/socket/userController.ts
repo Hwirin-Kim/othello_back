@@ -9,18 +9,24 @@ export class UserController {
     this.io = io;
   }
 
-  connectUser(socket) {
+  async connectUser(socket) {
     const { username, nickname } = socket.user;
+    const gameStatus = await GameStatus.findOne({ where: { username } });
 
-    const user = new User(username, nickname);
-    socket.data.user = user;
-    this.user = user;
-    console.log(`${nickname} (${username}) 님이 소켓에 접속하였음`);
-  }
-  getUser() {
-    return this.user;
-  }
+    const { isPlaying, isReady, isOwner, stoneColor } = gameStatus.dataValues;
+    if (isPlaying) {
+      console.log("유저컨트롤러 : 유저가 게임중이였습니다.");
+    }
 
+    console.log(
+      `유저컨트롤러 : ${nickname} (${username}) 님이 소켓에 접속하였음`
+    );
+  }
+  async getUserStatus(socket) {
+    const { username } = socket.user;
+    const gameStatus = await GameStatus.findOne({ where: { username } });
+    return gameStatus.dataValues;
+  }
   async setGameStatusReady(username: string, isReady: boolean) {
     console.log("setGameStatusReady : ", username);
     const gameStatus = await GameStatus.findOne({ where: { username } });

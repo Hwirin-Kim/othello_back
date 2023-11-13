@@ -4,13 +4,14 @@ import app from "./app";
 import initSocket from "./socket";
 import userRoutes from "./routes/user.routes";
 import authRoutes from "./routes/auth.routes";
-import sequelize from "./models/db";
+
+import db from "./models/db";
 
 const connectDB = async () => {
   try {
-    await sequelize.authenticate();
+    await db.sequelize.authenticate();
     console.log("Connection has been established successfully.");
-    await sequelize.sync();
+    await db.sequelize.sync();
     console.log("model was synchronized successfully");
   } catch (error) {
     console.error("Database connection failed:", error);

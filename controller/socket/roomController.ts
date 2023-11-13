@@ -11,15 +11,18 @@ export class RoomController {
     this.rooms = [];
   }
 
-  createRoom(title: string) {
+  createRoom(title: string, socket: Socket, user) {
     const room = new Room(title);
     this.rooms.unshift(room);
     this.io.emit("room_list", this.rooms);
+    socket.join(room.roomId);
+    room.addUser(user);
     return room;
   }
 
-  joinRoom(roomId: string, user: User, socket) {
+  joinRoom(roomId: string, socket) {
     const room = this.getRoom(roomId);
+    const user = socket.user;
     const { username, nickname } = user;
 
     //방이 존재하지 않음
@@ -64,7 +67,7 @@ export class RoomController {
     }
     // 방에 재입장 하는 경우
     else {
-      room.users = room.users.filter((u) => u.username !== user.username);
+      room.users = room.users.filter((user) => user.username !== username);
       room.users.push(user);
       console.log(nickname, ": 님 이 방에 접속함");
       socket.join(roomId);
@@ -72,14 +75,14 @@ export class RoomController {
     }
   }
 
-  sendMessage(data, user, socket) {
+  sendMessage(data, socket) {
     console.log(data);
-    const { username, nickname } = user;
+    const { username, nickname } = socket.user;
     const { roomId, message } = data;
     const room = this.getRoom(roomId);
     const sendMessage = new Message("message", username, nickname, message);
 
-    if (!room.users.some((user) => user.username === username)) {
+    if (!room.users.some((user) => user === username)) {
       console.log("해당 방에 접속하지 않았습니다.");
       socket.emit("send_message", {
         success: false,
@@ -93,8 +96,8 @@ export class RoomController {
     }
   }
 
-  leaveRoom(roomId, user, socket) {
-    const { username, nickname } = user;
+  leaveRoom(roomId, socket) {
+    const { username, nickname } = socket.user;
     const room = this.getRoom(roomId);
     const leaveRoomMessage = new Message(
       "notice",
@@ -105,6 +108,8 @@ export class RoomController {
 
     const leave = room.leaveUser(username);
     const leftUser = room.leftUser();
+
+    //room객체에서 user제거 시킨 후 실제 socket에서 제거시키기
     if (leave) {
       socket.leave(roomId);
       console.log(nickname, ": 방나감");
@@ -113,8 +118,8 @@ export class RoomController {
         data: leaveRoomMessage,
       });
 
-      //방장 변경
-      if (leftUser && leftUser.username !== room.owner.username) {
+      //남은 유저에게 방장 위임
+      if (leftUser && leftUser !== room.owner) {
         room.setOwner(leftUser);
         const message = new Message(
           "notice",
@@ -157,60 +162,61 @@ export class RoomController {
     const room = this.getRoom(roomId);
     this.io.to(roomId).emit("room_info", room);
   }
-  ready(roomId, username, nickname) {
-    const room = this.getRoom(roomId);
-    console.log(room);
-    const ready = room.setReady(username);
+  // ready(roomId, username, nickname) {
+  //   const room = this.getRoom(roomId);
+  //   console.log(room);
+  //   const ready = room.setReady(username);
 
-    if (ready) {
-      const message = new Message(
-        "notice",
-        username,
-        nickname,
-        `${nickname}님이 준비 완료 하셨습니다.`
-      );
-      this.io
-        .to(roomId)
-        .emit("receive_message", { success: true, data: message });
-    } else {
-      const message = new Message(
-        "notice",
-        username,
-        nickname,
-        `${nickname}님이 준비를 취소하였습니다.`
-      );
-      this.io
-        .to(roomId)
-        .emit("receive_message", { success: true, data: message });
-    }
-    return ready;
-  }
-  possibleGameStart(roomId) {
-    const room = this.getRoom(roomId);
-    if (room && room.allUsersReady) {
-      this.io.to(roomId).emit("possible_game_start", true);
-    } else this.io.to(roomId).emit("possible_game_start", false);
-  }
+  //   if (ready) {
+  //     const message = new Message(
+  //       "notice",
+  //       username,
+  //       nickname,
+  //       `${nickname}님이 준비 완료 하셨습니다.`
+  //     );
+  //     this.io
+  //       .to(roomId)
+  //       .emit("receive_message", { success: true, data: message });
+  //   } else {
+  //     const message = new Message(
+  //       "notice",
+  //       username,
+  //       nickname,
+  //       `${nickname}님이 준비를 취소하였습니다.`
+  //     );
+  //     this.io
+  //       .to(roomId)
+  //       .emit("receive_message", { success: true, data: message });
+  //   }
+  //   return ready;
+  // }
 
-  gameStart(roomId) {
-    const room = this.getRoom(roomId);
+  // possibleGameStart(roomId) {
+  //   const room = this.getRoom(roomId);
+  //   if (room && room.allUsersReady) {
+  //     this.io.to(roomId).emit("possible_game_start", true);
+  //   } else this.io.to(roomId).emit("possible_game_start", false);
+  // }
 
-    room.setGameStart();
-    this.io.to(roomId).emit("game_status", room.gameStart);
-    this.emitTurn(roomId, room.currentTurn);
-    this.startTurnTimer(roomId);
-  }
+  // gameStart(roomId) {
+  //   const room = this.getRoom(roomId);
 
-  startTurnTimer(roomId) {
-    setTimeout(() => {
-      this.changeTurn(roomId); // 시간 초과시 턴 변경
-    }, 15000); // 15초 후 턴 변경
-  }
-  changeTurn(roomId) {
-    const room = this.getRoom(roomId);
-    room.setTurn();
-    this.emitTurn(roomId, room.currentTurn);
-  }
+  //   room.setGameStart();
+  //   this.io.to(roomId).emit("game_status", room.gameStart);
+  //   this.emitTurn(roomId, room.currentTurn);
+  //   this.startTurnTimer(roomId);
+  // }
+
+  // startTurnTimer(roomId) {
+  //   setTimeout(() => {
+  //     this.changeTurn(roomId); // 시간 초과시 턴 변경
+  //   }, 15000); // 15초 후 턴 변경
+  // }
+  // changeTurn(roomId) {
+  //   const room = this.getRoom(roomId);
+  //   room.setTurn();
+  //   this.emitTurn(roomId, room.currentTurn);
+  // }
 
   emitTurn(roomId, turn) {
     this.io.to(roomId).emit("current_turn", { success: true, data: turn });
