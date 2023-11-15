@@ -4,6 +4,7 @@ import { UserController } from "./controller/socket/userController";
 import { socketAuthenticate } from "./middleware/socketAuthenticate";
 import { User } from "./models/db/user.model";
 import { CustomSocket } from "./type";
+import SimpleUser from "./models/domain/simpleUser";
 
 export default function initSocket(io: Server) {
   io.use(socketAuthenticate);
@@ -13,8 +14,9 @@ export default function initSocket(io: Server) {
   //socket 접속
   io.on("connection", (socket: CustomSocket) => {
     const { username, nickname } = socket.user;
+    const simpleUser = new SimpleUser(username, nickname);
     userController.connectUser(username, nickname);
-    const user = socket.user;
+
     User.findOne({
       attributes: ["username", "nickname"],
       where: {
@@ -24,7 +26,7 @@ export default function initSocket(io: Server) {
 
     //방생성(클라이언트요청)
     socket.on("create_room", async (title: string) => {
-      const room = roomController.createRoom(title, socket, user);
+      const room = roomController.createRoom(title, socket, simpleUser);
 
       socket.emit("created_room", { success: true, roomId: room.roomId });
       socket.emit("owner", room.getOwner());
@@ -32,7 +34,7 @@ export default function initSocket(io: Server) {
 
     //방입장(클라이언트요청)
     socket.on("join_room", async (roomId, callback) => {
-      const join = roomController.joinRoom(roomId, socket);
+      const join = roomController.joinRoom(roomId, socket, simpleUser);
       roomController.emitRoomInfo(roomId);
       console.log("방입장의 join : ", join);
       callback(join);
@@ -62,7 +64,7 @@ export default function initSocket(io: Server) {
 
     //사용자 ready(클라이언트요청)
     socket.on("ready", async (roomId, callback) => {
-      const ready = roomController.ready(roomId, user);
+      const ready = roomController.ready(roomId, simpleUser);
 
       await userController.setGameStatusReady(username, ready);
       callback(ready);

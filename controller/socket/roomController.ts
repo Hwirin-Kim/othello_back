@@ -3,6 +3,7 @@ import { User } from "../../models/db/user.model";
 import Message from "../../models/domain/message";
 import Room from "../../models/domain/room";
 import { GameStatus } from "../../models/db/status.model";
+import SimpleUser from "../../models/domain/simpleUser";
 
 export class RoomController {
   private io: Server;
@@ -14,21 +15,21 @@ export class RoomController {
   }
 
   //방생성
-  createRoom(title: string, socket: Socket, user) {
+  createRoom(title: string, socket: Socket, user: SimpleUser) {
     const room = new Room(title);
     this.rooms.unshift(room);
     this.io.emit("room_list", this.rooms);
     socket.join(room.roomId);
-    const simpleUser = { ...user, stoneColor: "white" };
-    room.addUser(simpleUser);
+    user.setStoneColor("white");
+    room.addUser(user);
     return room;
   }
 
   //방입장
-  joinRoom(roomId: string, socket) {
+  joinRoom(roomId: string, socket, simpleUser) {
     const room = this.getRoom(roomId);
-    const user = socket.user;
-    const { username, nickname } = user;
+
+    const { username, nickname } = simpleUser;
 
     //방이 존재하지 않음
     if (!room) {
@@ -54,15 +55,10 @@ export class RoomController {
 
     // 방에 처음 입장하는 경우
     else if (!room.users.some((user) => user.username === username)) {
+      //상대의 색상과 반대의 돌 색상 할당
       const opponent = room.users.find((u) => u.username !== username);
       const myColor = opponent.stoneColor === "white" ? "black" : "white";
-
-      //돌 색상을 검정으로 변경
-      const simpleUser: {
-        username: string;
-        nickname: string;
-        stoneColor: "white" | "black";
-      } = { username, nickname, stoneColor: myColor };
+      simpleUser.setStoneColor(myColor);
 
       console.log(nickname, ": 님 이 방에 접속함");
       const userJoinedMessage = new Message(
@@ -83,7 +79,7 @@ export class RoomController {
     // 방에 재입장 하는 경우
     else {
       room.users = room.users.filter((user) => user.username !== username);
-      room.users.push(user);
+      room.users.push(simpleUser);
       console.log(nickname, ": 님 이 방에 접속함");
       socket.join(roomId);
       return { success: true };
@@ -187,7 +183,7 @@ export class RoomController {
   }
 
   //사용자 레디
-  ready(roomId, user) {
+  ready(roomId: string, user: SimpleUser) {
     const { username, nickname } = user;
     const room = this.getRoom(roomId);
     const ready = room.setReady(user);
@@ -238,7 +234,7 @@ export class RoomController {
     }
   }
 
-  emitTurn(roomId) {
+  emitTurn(roomId: string) {
     const room = this.getRoom(roomId);
     const currentTurn = room.getCurrentTurn();
     this.io
@@ -246,7 +242,7 @@ export class RoomController {
       .emit("current_turn", { success: true, data: currentTurn });
   }
 
-  gameOver(roomId) {
+  gameOver(roomId: string) {
     const room = this.getRoom(roomId);
     const winner = room.winner;
     this.io.to(roomId).emit("game_over", winner);
