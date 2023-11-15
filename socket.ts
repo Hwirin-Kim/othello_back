@@ -7,14 +7,14 @@ import { CustomSocket } from "./type";
 
 export default function initSocket(io: Server) {
   io.use(socketAuthenticate);
-  const userController = new UserController(io);
+  const userController = new UserController();
   const roomController = new RoomController(io);
 
   //socket 접속
   io.on("connection", (socket: CustomSocket) => {
-    userController.connectUser(socket);
-    const user = socket.user;
     const { username, nickname } = socket.user;
+    userController.connectUser(username, nickname);
+    const user = socket.user;
     User.findOne({
       attributes: ["username", "nickname"],
       where: {
@@ -31,9 +31,10 @@ export default function initSocket(io: Server) {
     });
 
     //방입장(클라이언트요청)
-    socket.on("join_room", (roomId, callback) => {
+    socket.on("join_room", async (roomId, callback) => {
       const join = roomController.joinRoom(roomId, socket);
       roomController.emitRoomInfo(roomId);
+      console.log("방입장의 join : ", join);
       callback(join);
     });
 
@@ -59,17 +60,33 @@ export default function initSocket(io: Server) {
       roomController.getRoomList(socket);
     });
 
-    // socket.on("ready", (roomId, callback) => {
-    //   const ready = roomController.ready(roomId, username, nickname);
-    //   console.log(ready);
-    //   userController.setGameStatusReady(username, ready);
-    //   callback(ready);
-    //   roomController.possibleGameStart(roomId);
-    //   roomController.emitRoomInfo(roomId);
-    // });
+    //사용자 ready(클라이언트요청)
+    socket.on("ready", async (roomId, callback) => {
+      const ready = roomController.ready(roomId, user);
 
-    // socket.on("game_start", (roomId) => {
-    //   roomController.gameStart(roomId);
-    // });
+      await userController.setGameStatusReady(username, ready);
+      callback(ready);
+      roomController.emitRoomInfo(roomId);
+    });
+
+    //방장이 게임 시작(클라이언트요청)
+    socket.on("game_start", (roomId) => {
+      console.log("게임시작요청!");
+      roomController.gameStart(roomId);
+    });
+
+    //사용자가 돌 착수(클라이언트요청)
+    socket.on("placed_stone", (roomId, data) => {
+      roomController.playerMove(roomId);
+      console.log(data, roomId);
+      io.to(roomId).emit("opponent_placed_stone", data);
+    });
+
+    //사용자 돌 색상 요청(클라이언트요청)
+    socket.on("my_stone_color", (roomId, callback) => {
+      const room = roomController.getRoom(roomId);
+      const myColor = room.getMyColor(username);
+      callback(myColor);
+    });
   });
 }
